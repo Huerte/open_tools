@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>Huerte - Word counter</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --field: #f6f8fa;
+    --ink: #17202b;
+    --muted: #5b6877;
+    --line: #d5dbe2;
+    --accent: #2457c5;
+    --accent-soft: #e3eaf8;
+    --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1317;
+      --panel: #171c22;
+      --field: #12171c;
+      --ink: #e5e9ee;
+      --muted: #98a3b0;
+      --line: #2a323b;
+      --accent: #7fa9f2;
+      --accent-soft: #1e2a3f;
+      --on-accent: #0f1317;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .shell { max-width: 860px; margin: 0 auto; padding: 36px 20px 44px; }
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .author {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  .author:hover { background: var(--field); }
+  .author svg { width: 16px; height: 16px; fill: currentColor; }
+  h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
+  .lede { margin-top: 6px; color: var(--muted); }
+  .editor {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .editor:focus-within { border-color: var(--accent); }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--field); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .btn.primary:hover { background: var(--accent); filter: brightness(1.08); }
+  textarea {
+    width: 100%;
+    min-height: 420px;
+    height: 52vh;
+    border: 0;
+    resize: vertical;
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.8;
+    padding: 20px 22px;
+  }
+  textarea::placeholder { color: var(--muted); opacity: 0.8; }
+  textarea:focus { outline: none; }
+  .counts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--line);
+  }
+  .counts > div { padding: 14px 16px; }
+  .counts > div + div { border-left: 1px solid var(--line); }
+  .num {
+    display: block;
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .label { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 14px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 37px;
+  }
+  #status { color: var(--accent); font-weight: 600; }
+  .undo {
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+  .undo[hidden] { display: none; }
+  .scope {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .scope[hidden] { display: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  textarea:focus-visible { outline: none; }
+  @media (max-width: 640px) {
+    .counts { grid-template-columns: repeat(2, 1fr); }
+    .counts > div:nth-child(3) { border-left: 0; }
+    .counts > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+    textarea { min-height: 300px; height: 42vh; }
+    .author { padding: 6px 10px; }
+    .foot { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>Word counter</h1>
+      <p class="lede">Count words, characters, sentences and paragraphs as you type.</p>
+    </div>
+    <a class="author" href="https://github.com/Huerte" target="_blank" rel="noopener noreferrer" aria-label="Huerte on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Huerte
+    </a>
+  </header>
+
+  <main class="editor">
+    <div class="toolbar">
+      <div class="tools">
+        <button type="button" class="btn" id="paste">Paste</button>
+        <button type="button" class="btn" id="open">Open file</button>
+        <button type="button" class="btn" id="clear">Clear</button>
+      </div>
+      <button type="button" class="btn primary" id="copy">Copy counts</button>
+    </div>
+
+    <textarea id="text" spellcheck="true" aria-label="Text to count" placeholder="Type or paste text here. The counts update as you write."></textarea>
+
+    <div class="counts">
+      <div><span class="num" id="v-words">0</span><span class="label">Words</span></div>
+      <div><span class="num" id="v-chars">0</span><span class="label">Characters</span></div>
+      <div><span class="num" id="v-sentences">0</span><span class="label">Sentences</span></div>
+      <div><span class="num" id="v-paragraphs">0</span><span class="label">Paragraphs</span></div>
+    </div>
+
+    <div class="foot">
+      <span><span id="status" role="status"></span><button type="button" class="undo" id="undo" hidden>Undo</button> <span class="scope" id="scope" hidden>Counting selection</span></span>
+      <span>Your text stays in this browser. Nothing is uploaded.</span>
+    </div>
+    <input type="file" id="file" accept=".txt,.md,.markdown,.csv,.log,.json,.html,.srt,text/*" hidden>
+  </main>
+</div>
+
+<script>
+(function () {
+  var STORE = "open_tools.word_counter";
+  var MAX_FILE = 5 * 1024 * 1024;
+  var TOKEN = /\p{N}+(?:[.,]\p{N}+)+|[\p{L}\p{N}\p{M}]+(?:['’\-][\p{L}\p{N}\p{M}]+)*/gu;
+  var HAS_WORD_CHAR = /[\p{L}\p{N}]/u;
+  var SENTENCE_BREAK = /(?:[.!?]+(?=\s|$)|[…]+|\n+)/;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var ta = $("text");
+  var statusTimer = 0;
+  var backup = null;
+  var saveTimer = 0;
+  var frame = 0;
+
+  try {
+    var saved = localStorage.getItem(STORE);
+    if (saved) ta.value = saved;
+  } catch (e) {}
+
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+
+  function analyze(text) {
+    return {
+      words: (text.match(TOKEN) || []).length,
+      chars: Array.from(text).length,
+      sentences: text ? text.split(SENTENCE_BREAK).filter(function (p) { return HAS_WORD_CHAR.test(p); }).length : 0,
+      paragraphs: text ? text.split(/\n\s*\n/).filter(function (p) { return p.trim(); }).length : 0
+    };
+  }
+
+  function render() {
+    frame = 0;
+    var value = ta.value;
+    var hasSel = ta.selectionStart !== ta.selectionEnd;
+    var s = analyze(hasSel ? value.slice(ta.selectionStart, ta.selectionEnd) : value);
+    $("scope").hidden = !hasSel;
+    $("v-words").textContent = fmt(s.words);
+    $("v-chars").textContent = fmt(s.chars);
+    $("v-sentences").textContent = fmt(s.sentences);
+    $("v-paragraphs").textContent = fmt(s.paragraphs);
+  }
+
+  function schedule() {
+    if (!frame) frame = requestAnimationFrame(render);
+  }
+
+  function persist() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try { localStorage.setItem(STORE, ta.value); } catch (e) {}
+    }, 300);
+  }
+
+  function say(message, undoable) {
+    var el = $("status");
+    el.textContent = message;
+    $("undo").hidden = !undoable;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () {
+      el.textContent = "";
+      $("undo").hidden = true;
+      backup = null;
+    }, undoable ? 10000 : 3000);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var tmp = document.createElement("textarea");
+      tmp.value = text;
+      tmp.setAttribute("readonly", "");
+      tmp.style.position = "fixed";
+      tmp.style.opacity = "0";
+      document.body.appendChild(tmp);
+      tmp.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(tmp);
+      ok ? resolve() : reject();
+    });
+  }
+
+  function summary() {
+    var s = analyze(ta.value);
+    return [
+      "Words: " + fmt(s.words),
+      "Characters: " + fmt(s.chars),
+      "Characters without spaces: " + fmt(Array.from(ta.value.replace(/\s/g, "")).length),
+      "Sentences: " + fmt(s.sentences),
+      "Paragraphs: " + fmt(s.paragraphs)
+    ].join("\n");
+  }
+
+  function setText(value) {
+    ta.value = value;
+    ta.setSelectionRange(0, 0);
+    schedule();
+    persist();
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE) { say("File is larger than 5 MB"); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var previous = ta.value;
+      setText(String(reader.result || ""));
+      backup = previous.trim() ? previous : null;
+      say("Loaded " + file.name, backup !== null);
+      ta.focus();
+    };
+    reader.onerror = function () { say("That file could not be read"); };
+    reader.readAsText(file);
+  }
+
+  ta.addEventListener("input", function () { schedule(); persist(); });
+  document.addEventListener("selectionchange", function () {
+    if (document.activeElement === ta) schedule();
+  });
+  ta.addEventListener("dragover", function (e) {
+    if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") !== -1) e.preventDefault();
+  });
+  ta.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      e.preventDefault();
+      loadFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  $("paste").addEventListener("click", function () {
+    var blocked = "The browser blocked clipboard access. Press Ctrl+V inside the text box.";
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      ta.focus();
+      say(blocked);
+      return;
+    }
+    navigator.clipboard.readText().then(function (clip) {
+      ta.focus();
+      ta.setRangeText(clip, ta.selectionStart, ta.selectionEnd, "end");
+      schedule();
+      persist();
+    }).catch(function () {
+      ta.focus();
+      say(blocked);
+    });
+  });
+
+  $("open").addEventListener("click", function () { $("file").click(); });
+  $("file").addEventListener("change", function (e) {
+    loadFile(e.target.files[0]);
+    e.target.value = "";
+  });
+
+  $("clear").addEventListener("click", function () {
+    if (!ta.value) { ta.focus(); return; }
+    var previous = ta.value;
+    setText("");
+    backup = previous;
+    say("Cleared", true);
+    ta.focus();
+  });
+
+  $("undo").addEventListener("click", function () {
+    if (backup === null) return;
+    var restored = backup;
+    backup = null;
+    setText(restored);
+    say("Text restored");
+    ta.focus();
+  });
+
+  $("copy").addEventListener("click", function () {
+    copyText(summary()).then(
+      function () { say("Counts copied"); },
+      function () { say("Copy failed. Select the text and copy it manually."); }
+    );
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
